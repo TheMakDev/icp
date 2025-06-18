@@ -1,20 +1,83 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Users, Calendar, TrendingUp, Settings, FileText } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+
+interface StaffStats {
+  totalStaff: number;
+  presentToday: number;
+  lateToday: number;
+  absentToday: number;
+  totalHoursToday: number;
+  attendanceRate: number;
+}
 
 const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
 
-  // Mock data - will be replaced with actual data from Supabase
-  const stats = {
-    totalStaff: 156,
-    presentToday: 142,
-    lateToday: 8,
-    absentToday: 6,
-    totalHoursToday: 1136,
-    attendanceRate: 91.0
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  // Fetch all staff profiles
+  const { data: staffProfiles } = useQuery({
+    queryKey: ['staff-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching staff profiles:', error);
+        return [];
+      }
+      return data;
+    }
+  });
+
+  // Fetch today's attendance records
+  const { data: todayAttendance } = useQuery({
+    queryKey: ['today-attendance'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('date', today);
+      
+      if (error) {
+        console.error('Error fetching attendance records:', error);
+        return [];
+      }
+      return data;
+    }
+  });
+
+  // Calculate stats from real data
+  const stats: StaffStats = {
+    totalStaff: staffProfiles?.length || 0,
+    presentToday: todayAttendance?.filter(record => record.status === 'present').length || 0,
+    lateToday: todayAttendance?.filter(record => record.status === 'late').length || 0,
+    absentToday: todayAttendance?.filter(record => record.status === 'absent').length || 0,
+    totalHoursToday: todayAttendance?.reduce((total, record) => {
+      if (record.check_in_time && record.check_out_time) {
+        const checkIn = new Date(record.check_in_time);
+        const checkOut = new Date(record.check_out_time);
+        const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+        return total + hours;
+      }
+      return total;
+    }, 0) || 0,
+    attendanceRate: staffProfiles?.length > 0 ? 
+      ((todayAttendance?.filter(record => record.status === 'present').length || 0) / staffProfiles.length * 100) : 0
   };
 
   return (
@@ -37,7 +100,7 @@ const AdminDashboard = () => {
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/'}>
+              <Button variant="outline" onClick={handleLogout}>
                 Logout
               </Button>
             </div>
@@ -81,10 +144,10 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-purple-600">{stats.attendanceRate}%</div>
+                <div className="text-2xl font-bold text-purple-600">{stats.attendanceRate.toFixed(1)}%</div>
                 <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
-              <p className="text-xs text-gray-500 mt-1">This month average</p>
+              <p className="text-xs text-gray-500 mt-1">Today's rate</p>
             </CardContent>
           </Card>
 
@@ -94,7 +157,7 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-orange-600">{stats.totalHoursToday}</div>
+                <div className="text-2xl font-bold text-orange-600">{Math.round(stats.totalHoursToday)}</div>
                 <Calendar className="w-6 h-6 text-orange-600" />
               </div>
               <p className="text-xs text-gray-500 mt-1">Logged today</p>
