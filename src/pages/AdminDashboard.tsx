@@ -130,7 +130,7 @@ const AdminDashboard = () => {
               <CardDescription>
                 Monitor daily attendance, approve entries, and track patterns
               </CardDescription>
-            </CardContent>
+            </CardHeader>
             <CardContent>
               <Button className="w-full" variant="outline">
                 View Records
@@ -147,7 +147,7 @@ const AdminDashboard = () => {
               <CardDescription>
                 Create detailed attendance reports and analytics
               </CardDescription>
-            </CardContent>
+            </CardHeader>
             <CardContent>
               <Button className="w-full" variant="outline">
                 Create Report
