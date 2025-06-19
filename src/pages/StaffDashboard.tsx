@@ -5,18 +5,110 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Clock, LogIn, LogOut, Calendar, User } from 'lucide-react';
 import AttendanceHistory from '@/components/attendance/AttendanceHistory';
 import CheckInOut from '@/components/attendance/CheckInOut';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const StaffDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
-  
-  // Mock user data - will be replaced with actual user data from Supabase
+  const { profile, isLoading: profileLoading } = useProfile();
+  const { signOut } = useAuth();
+
+  // Fetch current user's attendance data
+  const { data: todayAttendance } = useQuery({
+    queryKey: ['my-today-attendance', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('date', today)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching today attendance:', error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!profile?.id
+  });
+
+  // Fetch weekly attendance stats
+  const { data: weeklyStats } = useQuery({
+    queryKey: ['my-weekly-stats', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return { daysAttended: 0, totalHours: 0 };
+      
+      const startOfWeek = new Date();
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('user_id', profile.id)
+        .gte('date', startOfWeek.toISOString().split('T')[0])
+        .lte('date', endOfWeek.toISOString().split('T')[0]);
+      
+      if (error) {
+        console.error('Error fetching weekly stats:', error);
+        return { daysAttended: 0, totalHours: 0 };
+      }
+
+      const daysAttended = data?.filter(record => record.status === 'present' || record.status === 'late').length || 0;
+      const totalHours = data?.reduce((total, record) => {
+        if (record.check_in_time && record.check_out_time) {
+          const checkIn = new Date(record.check_in_time);
+          const checkOut = new Date(record.check_out_time);
+          const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+          return total + hours;
+        }
+        return total;
+      }, 0) || 0;
+
+      return { daysAttended, totalHours };
+    },
+    enabled: !!profile?.id
+  });
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Unable to load profile data.</p>
+        </div>
+      </div>
+    );
+  }
+
   const userData = {
-    name: 'John Doe',
-    staffId: 'ICP/2024/001',
-    department: 'Computer Science',
-    isCheckedIn: false,
-    lastCheckIn: null,
-    lastCheckOut: '2024-01-15 17:30:00'
+    name: `${profile.first_name} ${profile.last_name}`,
+    staffId: profile.staff_id,
+    department: profile.department,
+    isCheckedIn: todayAttendance?.check_in_time && !todayAttendance?.check_out_time,
+    lastCheckIn: todayAttendance?.check_in_time,
+    lastCheckOut: todayAttendance?.check_out_time
   };
 
   const renderContent = () => {
@@ -69,7 +161,7 @@ const StaffDashboard = () => {
                   <CardTitle className="text-sm font-medium text-gray-600">This Week</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">4/5</div>
+                  <div className="text-2xl font-bold text-blue-600">{weeklyStats?.daysAttended || 0}/5</div>
                   <p className="text-xs text-gray-500">Days attended</p>
                 </CardContent>
               </Card>
@@ -79,7 +171,7 @@ const StaffDashboard = () => {
                   <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-purple-600">32.5</div>
+                  <div className="text-2xl font-bold text-purple-600">{(weeklyStats?.totalHours || 0).toFixed(1)}</div>
                   <p className="text-xs text-gray-500">This week</p>
                 </CardContent>
               </Card>
@@ -131,7 +223,7 @@ const StaffDashboard = () => {
                 <p className="text-sm text-gray-600">ICP Attendance System</p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => window.location.href = '/'}>
+            <Button variant="outline" onClick={handleLogout}>
               Logout
             </Button>
           </div>

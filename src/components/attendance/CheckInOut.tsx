@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, MapPin, CheckCircle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CheckInOutProps {
   userData: {
@@ -18,34 +21,128 @@ interface CheckInOutProps {
 
 const CheckInOut = ({ userData }: CheckInOutProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [checkedIn, setCheckedIn] = useState(userData.isCheckedIn);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   const currentTime = new Date().toLocaleString();
 
   const handleCheckIn = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
-    // Simulate API call - will be replaced with Supabase function
-    setTimeout(() => {
-      setCheckedIn(true);
-      setIsLoading(false);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date().toISOString();
+      
+      // Check if there's already a record for today
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingRecord) {
+        // Update existing record with check-in time
+        const { error: updateError } = await supabase
+          .from('attendance_records')
+          .update({ 
+            check_in_time: now,
+            status: 'present'
+          })
+          .eq('id', existingRecord.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Create new attendance record
+        const { error: insertError } = await supabase
+          .from('attendance_records')
+          .insert({
+            user_id: user.id,
+            date: today,
+            check_in_time: now,
+            status: 'present'
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['my-today-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['my-weekly-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-profiles'] });
+
       toast({
         title: "Checked In Successfully",
         description: `Welcome to work, ${userData.name}!`,
       });
-    }, 1000);
+    } catch (error) {
+      console.error('Check-in error:', error);
+      toast({
+        title: "Check-in Failed",
+        description: "There was an error checking you in. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCheckOut = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
-    // Simulate API call - will be replaced with Supabase function
-    setTimeout(() => {
-      setCheckedIn(false);
-      setIsLoading(false);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date().toISOString();
+      
+      // Find today's attendance record
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single();
+
+      if (fetchError) {
+        throw new Error('No check-in record found for today. Please check in first.');
+      }
+
+      // Update with check-out time
+      const { error: updateError } = await supabase
+        .from('attendance_records')
+        .update({ 
+          check_out_time: now
+        })
+        .eq('id', existingRecord.id);
+
+      if (updateError) throw updateError;
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['my-today-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['my-weekly-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-profiles'] });
+
       toast({
         title: "Checked Out Successfully",
         description: "Have a great day!",
       });
-    }, 1000);
+    } catch (error) {
+      console.error('Check-out error:', error);
+      toast({
+        title: "Check-out Failed",
+        description: error instanceof Error ? error.message : "There was an error checking you out. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,19 +164,19 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
       <Card>
         <CardHeader className="text-center">
           <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-            checkedIn ? 'bg-green-100' : 'bg-gray-100'
+            userData.isCheckedIn ? 'bg-green-100' : 'bg-gray-100'
           }`}>
-            {checkedIn ? (
+            {userData.isCheckedIn ? (
               <CheckCircle className="w-10 h-10 text-green-600" />
             ) : (
               <Clock className="w-10 h-10 text-gray-600" />
             )}
           </div>
           <CardTitle className="text-2xl">
-            {checkedIn ? 'You are checked in' : 'Ready to check in?'}
+            {userData.isCheckedIn ? 'You are checked in' : 'Ready to check in?'}
           </CardTitle>
           <CardDescription>
-            {checkedIn 
+            {userData.isCheckedIn 
               ? 'Click below when you\'re ready to check out' 
               : 'Click below to record your arrival'
             }
@@ -91,7 +188,7 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
             <span>Ibadan City Polytechnic Campus</span>
           </div>
           
-          {checkedIn ? (
+          {userData.isCheckedIn ? (
             <Button 
               onClick={handleCheckOut}
               disabled={isLoading}
@@ -127,7 +224,9 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   <span className="font-medium">Last Check Out</span>
                 </div>
-                <span className="text-sm text-gray-600">{userData.lastCheckOut}</span>
+                <span className="text-sm text-gray-600">
+                  {new Date(userData.lastCheckOut).toLocaleString()}
+                </span>
               </div>
             )}
             {userData.lastCheckIn && (
@@ -136,7 +235,9 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span className="font-medium">Last Check In</span>
                 </div>
-                <span className="text-sm text-gray-600">{userData.lastCheckIn}</span>
+                <span className="text-sm text-gray-600">
+                  {new Date(userData.lastCheckIn).toLocaleString()}
+                </span>
               </div>
             )}
           </div>

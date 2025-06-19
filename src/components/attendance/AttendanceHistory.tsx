@@ -2,46 +2,35 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const AttendanceHistory = () => {
-  // Mock data - will be replaced with actual data from Supabase
-  const attendanceRecords = [
-    {
-      date: '2024-01-15',
-      checkIn: '09:15 AM',
-      checkOut: '05:30 PM',
-      totalHours: '8.25',
-      status: 'present'
+  const { user } = useAuth();
+
+  // Fetch user's attendance records
+  const { data: attendanceRecords = [], isLoading } = useQuery({
+    queryKey: ['my-attendance-history', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(10);
+      
+      if (error) {
+        console.error('Error fetching attendance history:', error);
+        return [];
+      }
+      
+      return data;
     },
-    {
-      date: '2024-01-14',
-      checkIn: '09:00 AM',
-      checkOut: '05:15 PM',
-      totalHours: '8.25',
-      status: 'present'
-    },
-    {
-      date: '2024-01-13',
-      checkIn: '09:30 AM',
-      checkOut: '05:45 PM',
-      totalHours: '8.25',
-      status: 'late'
-    },
-    {
-      date: '2024-01-12',
-      checkIn: '-',
-      checkOut: '-',
-      totalHours: '0',
-      status: 'absent'
-    },
-    {
-      date: '2024-01-11',
-      checkIn: '08:45 AM',
-      checkOut: '05:00 PM',
-      totalHours: '8.25',
-      status: 'present'
-    }
-  ];
+    enabled: !!user?.id
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -69,10 +58,30 @@ const AttendanceHistory = () => {
     }
   };
 
+  const calculateHours = (checkIn: string | null, checkOut: string | null) => {
+    if (!checkIn || !checkOut) return 0;
+    const checkInTime = new Date(checkIn);
+    const checkOutTime = new Date(checkOut);
+    return (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+  };
+
   // Calculate summary stats
   const totalDays = attendanceRecords.length;
   const presentDays = attendanceRecords.filter(record => record.status === 'present' || record.status === 'late').length;
-  const totalHours = attendanceRecords.reduce((sum, record) => sum + parseFloat(record.totalHours), 0);
+  const totalHours = attendanceRecords.reduce((sum, record) => {
+    return sum + calculateHours(record.check_in_time, record.check_out_time);
+  }, 0);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading attendance history...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -84,7 +93,7 @@ const AttendanceHistory = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {Math.round((presentDays / totalDays) * 100)}%
+              {totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0}%
             </div>
             <p className="text-xs text-gray-500">{presentDays} of {totalDays} days</p>
           </CardContent>
@@ -95,7 +104,7 @@ const AttendanceHistory = () => {
             <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totalHours}</div>
+            <div className="text-2xl font-bold text-green-600">{totalHours.toFixed(1)}</div>
             <p className="text-xs text-gray-500">This period</p>
           </CardContent>
         </Card>
@@ -125,33 +134,58 @@ const AttendanceHistory = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {attendanceRecords.map((record, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  {getStatusIcon(record.status)}
-                  <div>
-                    <div className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}</div>
-                    <div className="text-sm text-gray-600">
-                      {record.checkIn !== '-' ? `${record.checkIn} - ${record.checkOut}` : 'No attendance recorded'}
+          {attendanceRecords.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No attendance records found</p>
+              <p className="text-sm text-gray-500">Start by checking in to create your first record</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {attendanceRecords.map((record, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    {getStatusIcon(record.status)}
+                    <div>
+                      <div className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}</div>
+                      <div className="text-sm text-gray-600">
+                        {record.check_in_time && record.check_out_time ? (
+                          `${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })} - ${new Date(record.check_out_time).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}`
+                        ) : record.check_in_time ? (
+                          `Checked in at ${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}`
+                        ) : (
+                          'No attendance recorded'
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-medium">{record.totalHours}h</div>
-                    <div className="text-sm text-gray-600">Total</div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {calculateHours(record.check_in_time, record.check_out_time).toFixed(1)}h
+                      </div>
+                      <div className="text-sm text-gray-600">Total</div>
+                    </div>
+                    {getStatusBadge(record.status)}
                   </div>
-                  {getStatusBadge(record.status)}
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
