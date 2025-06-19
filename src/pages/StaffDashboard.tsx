@@ -1,14 +1,14 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, LogIn, LogOut, Calendar, User } from 'lucide-react';
+import { Clock, LogIn, LogOut, Calendar, User, MessageSquare } from 'lucide-react';
 import AttendanceHistory from '@/components/attendance/AttendanceHistory';
 import CheckInOut from '@/components/attendance/CheckInOut';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import FeedbackMessages from '@/components/staff/FeedbackMessages';
 
 const StaffDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -117,6 +117,8 @@ const StaffDashboard = () => {
         return <CheckInOut userData={userData} />;
       case 'history':
         return <AttendanceHistory />;
+      case 'messages':
+        return <FeedbackMessages />;
       default:
         return (
           <div className="space-y-6">
@@ -201,8 +203,19 @@ const StaffDashboard = () => {
                   <Calendar className="w-4 h-4 mr-2" />
                   View History
                 </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentView('messages')}
+                  className="flex-1"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Messages
+                </Button>
               </CardContent>
             </Card>
+
+            {/* Feedback Messages Preview */}
+            <FeedbackMessages />
           </div>
         );
     }
@@ -263,6 +276,16 @@ const StaffDashboard = () => {
               }`}
             >
               History
+            </button>
+            <button 
+              onClick={() => setCurrentView('messages')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                currentView === 'messages' 
+                  ? 'border-blue-500 text-blue-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Messages
             </button>
           </div>
         </div>

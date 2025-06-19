@@ -58,18 +58,26 @@ const AttendanceHistory = () => {
     }
   };
 
-  const calculateHours = (checkIn: string | null, checkOut: string | null) => {
-    if (!checkIn || !checkOut) return 0;
+  const calculateHoursAndMinutes = (checkIn: string | null, checkOut: string | null) => {
+    if (!checkIn || !checkOut) return { hours: 0, minutes: 0, totalHours: 0 };
+    
     const checkInTime = new Date(checkIn);
     const checkOutTime = new Date(checkOut);
-    return (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+    const totalMinutes = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60));
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const totalHours = totalMinutes / 60;
+    
+    return { hours, minutes, totalHours };
   };
 
   // Calculate summary stats
   const totalDays = attendanceRecords.length;
   const presentDays = attendanceRecords.filter(record => record.status === 'present' || record.status === 'late').length;
   const totalHours = attendanceRecords.reduce((sum, record) => {
-    return sum + calculateHours(record.check_in_time, record.check_out_time);
+    const { totalHours } = calculateHoursAndMinutes(record.check_in_time, record.check_out_time);
+    return sum + totalHours;
   }, 0);
 
   if (isLoading) {
@@ -104,7 +112,9 @@ const AttendanceHistory = () => {
             <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{totalHours.toFixed(1)}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {Math.floor(totalHours)}h {Math.round((totalHours % 1) * 60)}m
+            </div>
             <p className="text-xs text-gray-500">This period</p>
           </CardContent>
         </Card>
@@ -115,7 +125,7 @@ const AttendanceHistory = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {presentDays > 0 ? (totalHours / presentDays).toFixed(1) : '0'}
+              {presentDays > 0 ? `${Math.floor(totalHours / presentDays)}h ${Math.round(((totalHours / presentDays) % 1) * 60)}m` : '0h 0m'}
             </div>
             <p className="text-xs text-gray-500">When present</p>
           </CardContent>
@@ -142,48 +152,55 @@ const AttendanceHistory = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {attendanceRecords.map((record, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    {getStatusIcon(record.status)}
-                    <div>
-                      <div className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}</div>
-                      <div className="text-sm text-gray-600">
-                        {record.check_in_time && record.check_out_time ? (
-                          `${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })} - ${new Date(record.check_out_time).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}`
-                        ) : record.check_in_time ? (
-                          `Checked in at ${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}`
-                        ) : (
-                          'No attendance recorded'
-                        )}
+              {attendanceRecords.map((record, index) => {
+                const timeWorked = calculateHoursAndMinutes(record.check_in_time, record.check_out_time);
+                
+                return (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-4">
+                      {getStatusIcon(record.status)}
+                      <div>
+                        <div className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}</div>
+                        <div className="text-sm text-gray-600">
+                          {record.check_in_time && record.check_out_time ? (
+                            `${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })} - ${new Date(record.check_out_time).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}`
+                          ) : record.check_in_time ? (
+                            `Checked in at ${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}`
+                          ) : (
+                            'No attendance recorded'
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {calculateHours(record.check_in_time, record.check_out_time).toFixed(1)}h
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-medium">
+                          {timeWorked.hours > 0 || timeWorked.minutes > 0 
+                            ? `${timeWorked.hours}h ${timeWorked.minutes}m`
+                            : '0h 0m'
+                          }
+                        </div>
+                        <div className="text-sm text-gray-600">Total</div>
                       </div>
-                      <div className="text-sm text-gray-600">Total</div>
+                      {getStatusBadge(record.status)}
                     </div>
-                    {getStatusBadge(record.status)}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

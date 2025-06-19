@@ -1,8 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, CheckCircle, XCircle, Users, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,7 +15,7 @@ const AdminAttendanceView = () => {
         .from('attendance_records')
         .select(`
           *,
-          profiles:user_id (
+          profiles!attendance_records_user_id_fkey (
             first_name,
             last_name,
             staff_id,
@@ -60,6 +59,23 @@ const AdminAttendanceView = () => {
     }
   };
 
+  const calculateHoursAndMinutes = (checkIn: string | null, checkOut: string | null) => {
+    if (!checkIn || !checkOut) return { hours: 0, minutes: 0, display: 'In progress' };
+    
+    const checkInTime = new Date(checkIn);
+    const checkOutTime = new Date(checkOut);
+    const totalMinutes = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60));
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    return { 
+      hours, 
+      minutes, 
+      display: `${hours}h ${minutes}m` 
+    };
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -93,52 +109,52 @@ const AdminAttendanceView = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {todayAttendance.map((record) => (
-              <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  {getStatusIcon(record.status)}
-                  <div>
-                    <div className="font-medium">
-                      {record.profiles?.first_name} {record.profiles?.last_name}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {record.profiles?.staff_id} • {record.profiles?.department}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {record.check_in_time && record.check_out_time ? (
-                        `${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })} - ${new Date(record.check_out_time).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}`
-                      ) : record.check_in_time ? (
-                        `Checked in at ${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}`
-                      ) : (
-                        'No check-in recorded'
-                      )}
+            {todayAttendance.map((record) => {
+              const timeWorked = calculateHoursAndMinutes(record.check_in_time, record.check_out_time);
+              
+              return (
+                <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    {getStatusIcon(record.status)}
+                    <div>
+                      <div className="font-medium">
+                        {record.profiles?.first_name} {record.profiles?.last_name}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {record.profiles?.staff_id} • {record.profiles?.department}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {record.check_in_time && record.check_out_time ? (
+                          `${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })} - ${new Date(record.check_out_time).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}`
+                        ) : record.check_in_time ? (
+                          `Checked in at ${new Date(record.check_in_time).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}`
+                        ) : (
+                          'No check-in recorded'
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-sm font-medium">
-                      {record.check_in_time && record.check_out_time ? (
-                        `${((new Date(record.check_out_time).getTime() - new Date(record.check_in_time).getTime()) / (1000 * 60 * 60)).toFixed(1)}h`
-                      ) : (
-                        'In progress'
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-sm font-medium">
+                        {timeWorked.display}
+                      </div>
+                      <div className="text-xs text-gray-500">Total time</div>
                     </div>
-                    <div className="text-xs text-gray-500">Total time</div>
+                    {getStatusBadge(record.status)}
                   </div>
-                  {getStatusBadge(record.status)}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
