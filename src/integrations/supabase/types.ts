@@ -51,6 +51,39 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_messages: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          staff_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          staff_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          staff_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

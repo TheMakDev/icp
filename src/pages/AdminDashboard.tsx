@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import AdminAttendanceView from '@/components/admin/AdminAttendanceView';
+import FeedbackMessage from '@/components/admin/FeedbackMessage';
 
 interface StaffStats {
   totalStaff: number;
@@ -33,7 +35,8 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .eq('role', 'staff');
       
       if (error) {
         console.error('Error fetching staff profiles:', error);
@@ -66,7 +69,7 @@ const AdminDashboard = () => {
     totalStaff: staffProfiles?.length || 0,
     presentToday: todayAttendance?.filter(record => record.status === 'present').length || 0,
     lateToday: todayAttendance?.filter(record => record.status === 'late').length || 0,
-    absentToday: todayAttendance?.filter(record => record.status === 'absent').length || 0,
+    absentToday: (staffProfiles?.length || 0) - (todayAttendance?.length || 0),
     totalHoursToday: todayAttendance?.reduce((total, record) => {
       if (record.check_in_time && record.check_out_time) {
         const checkIn = new Date(record.check_in_time);
@@ -77,7 +80,7 @@ const AdminDashboard = () => {
       return total;
     }, 0) || 0,
     attendanceRate: staffProfiles?.length > 0 ? 
-      ((todayAttendance?.filter(record => record.status === 'present').length || 0) / staffProfiles.length * 100) : 0
+      ((todayAttendance?.length || 0) / staffProfiles.length * 100) : 0
   };
 
   return (
@@ -96,6 +99,20 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Button 
+                variant={currentView === 'dashboard' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setCurrentView('dashboard')}
+              >
+                Dashboard
+              </Button>
+              <Button 
+                variant={currentView === 'feedback' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setCurrentView('feedback')}
+              >
+                Send Feedback
+              </Button>
               <Button variant="outline" size="sm">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -110,146 +127,101 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Staff</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-blue-600">{stats.totalStaff}</div>
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Registered users</p>
-            </CardContent>
-          </Card>
+        {currentView === 'dashboard' && (
+          <>
+            {/* Stats Overview */}
+            <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6 mb-8">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Total Staff</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-blue-600">{stats.totalStaff}</div>
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Registered staff</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Present Today</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-green-600">{stats.presentToday}</div>
-                <Clock className="w-6 h-6 text-green-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Currently checked in</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Present Today</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-green-600">{stats.presentToday}</div>
+                    <Clock className="w-6 h-6 text-green-600" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Currently checked in</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Attendance Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-purple-600">{stats.attendanceRate.toFixed(1)}%</div>
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Today's rate</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Attendance Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-purple-600">{stats.attendanceRate.toFixed(1)}%</div>
+                    <TrendingUp className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Today's rate</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold text-orange-600">{Math.round(stats.totalHoursToday)}</div>
-                <Calendar className="w-6 h-6 text-orange-600" />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Logged today</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                Staff Management
-              </CardTitle>
-              <CardDescription>
-                View and manage all staff members, roles, and permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" variant="outline">
-                Manage Staff
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-600" />
-                Attendance Records
-              </CardTitle>
-              <CardDescription>
-                Monitor daily attendance, approve entries, and track patterns
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" variant="outline">
-                View Records
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-600" />
-                Generate Reports
-              </CardTitle>
-              <CardDescription>
-                Create detailed attendance reports and analytics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" variant="outline">
-                Create Report
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Today's Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Activity</CardTitle>
-            <CardDescription>
-              Real-time attendance status for {new Date().toLocaleDateString()}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{stats.presentToday}</div>
-                <div className="text-sm text-green-700">Present</div>
-              </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">{stats.lateToday}</div>
-                <div className="text-sm text-yellow-700">Late Arrivals</div>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">{stats.absentToday}</div>
-                <div className="text-sm text-red-700">Absent</div>
-              </div>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-orange-600">{Math.round(stats.totalHoursToday)}</div>
+                    <Calendar className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Logged today</p>
+                </CardContent>
+              </Card>
             </div>
-            
-            <div className="text-center">
-              <Button size="lg">
-                View Detailed Activity
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+            {/* Real Attendance Records */}
+            <AdminAttendanceView />
+          </>
+        )}
+
+        {currentView === 'feedback' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            <FeedbackMessage />
+            <Card>
+              <CardHeader>
+                <CardTitle>Feedback Tips</CardTitle>
+                <CardDescription>
+                  Best practices for effective staff communication
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Be Specific</h4>
+                  <p className="text-sm text-blue-700">
+                    Provide clear, actionable feedback that helps staff understand exactly what needs improvement.
+                  </p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h4 className="font-medium text-green-900 mb-2">Stay Positive</h4>
+                  <p className="text-sm text-green-700">
+                    Balance constructive criticism with recognition of good performance.
+                  </p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <h4 className="font-medium text-purple-900 mb-2">Follow Up</h4>
+                  <p className="text-sm text-purple-700">
+                    Check in with staff after sending feedback to ensure understanding and progress.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );
