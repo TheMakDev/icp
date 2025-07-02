@@ -15,7 +15,7 @@ const AdminAttendanceView = () => {
         .from('attendance_records')
         .select(`
           *,
-          profiles!attendance_records_user_id_fkey (
+          profiles!inner (
             first_name,
             last_name,
             staff_id,

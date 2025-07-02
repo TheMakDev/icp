@@ -21,7 +21,7 @@ const FeedbackMessages = () => {
         .from('feedback_messages')
         .select(`
           *,
-          profiles!feedback_messages_admin_id_fkey (
+          profiles!inner (
             first_name,
             last_name
           )
