@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ const FeedbackMessages = () => {
         .from('feedback_messages')
         .select(`
           *,
-          profiles!inner (
+          profiles!feedback_messages_admin_id_fkey (
             first_name,
             last_name
           )

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, CheckCircle, XCircle, Users } from 'lucide-react';
@@ -15,7 +14,7 @@ const AdminAttendanceView = () => {
         .from('attendance_records')
         .select(`
           *,
-          profiles!inner (
+          profiles!attendance_records_user_id_fkey (
             first_name,
             last_name,
             staff_id,
