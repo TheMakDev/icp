@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, CheckCircle, XCircle, Users } from 'lucide-react';
@@ -10,25 +11,44 @@ const AdminAttendanceView = () => {
     queryKey: ['admin-today-attendance'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
+      
+      // First get attendance records
+      const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance_records')
-        .select(`
-          *,
-          profiles!attendance_records_user_id_fkey (
-            first_name,
-            last_name,
-            staff_id,
-            department
-          )
-        `)
+        .select('*')
         .eq('date', today)
         .order('check_in_time', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching attendance records:', error);
+      if (attendanceError) {
+        console.error('Error fetching attendance records:', attendanceError);
         return [];
       }
-      return data;
+
+      if (!attendanceData || attendanceData.length === 0) {
+        return [];
+      }
+
+      // Get user IDs from attendance records
+      const userIds = attendanceData.map(record => record.user_id);
+      
+      // Fetch profiles for these users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+      
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        return attendanceData.map(record => ({ ...record, profiles: null }));
+      }
+
+      // Combine attendance records with profile data
+      const combinedData = attendanceData.map(record => {
+        const profile = profilesData?.find(p => p.id === record.user_id);
+        return { ...record, profiles: profile || null };
+      });
+
+      return combinedData;
     }
   });
 
@@ -117,10 +137,10 @@ const AdminAttendanceView = () => {
                     {getStatusIcon(record.status)}
                     <div>
                       <div className="font-medium">
-                        {record.profiles?.first_name} {record.profiles?.last_name}
+                        {record.profiles?.first_name || 'Unknown'} {record.profiles?.last_name || 'User'}
                       </div>
                       <div className="text-sm text-gray-600">
-                        {record.profiles?.staff_id} • {record.profiles?.department}
+                        {record.profiles?.staff_id || 'N/A'} • {record.profiles?.department || 'N/A'}
                       </div>
                       <div className="text-sm text-gray-500">
                         {record.check_in_time && record.check_out_time ? (

@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,24 +17,43 @@ const FeedbackMessages = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
+      // First get feedback messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('feedback_messages')
-        .select(`
-          *,
-          profiles!feedback_messages_admin_id_fkey (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .eq('staff_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching feedback messages:', error);
+      if (messagesError) {
+        console.error('Error fetching feedback messages:', messagesError);
         return [];
       }
+
+      if (!messagesData || messagesData.length === 0) {
+        return [];
+      }
+
+      // Get admin IDs from messages
+      const adminIds = [...new Set(messagesData.map(msg => msg.admin_id))];
       
-      return data;
+      // Fetch profiles for these admins
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', adminIds);
+      
+      if (profilesError) {
+        console.error('Error fetching admin profiles:', profilesError);
+        return messagesData.map(msg => ({ ...msg, profiles: null }));
+      }
+
+      // Combine messages with profile data
+      const combinedData = messagesData.map(msg => {
+        const profile = profilesData?.find(p => p.id === msg.admin_id);
+        return { ...msg, profiles: profile || null };
+      });
+
+      return combinedData;
     },
     enabled: !!user?.id
   });
@@ -125,7 +145,7 @@ const FeedbackMessages = () => {
                 
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-gray-500">
-                    From: {message.profiles?.first_name} {message.profiles?.last_name} • {' '}
+                    From: {message.profiles?.first_name || 'Unknown'} {message.profiles?.last_name || 'Admin'} • {' '}
                     {new Date(message.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
