@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,15 +145,15 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Current Status Card */}
       <Card className="border-l-4 border-l-blue-500">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
+        <CardHeader className="pb-2 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             Current Time
           </CardTitle>
-          <CardDescription className="text-lg font-mono">
+          <CardDescription className="text-base sm:text-lg font-mono">
             {currentTime}
           </CardDescription>
         </CardHeader>
@@ -162,29 +161,29 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
 
       {/* Check In/Out Action */}
       <Card>
-        <CardHeader className="text-center">
-          <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
+        <CardHeader className="text-center pb-3 sm:pb-4">
+          <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center mb-3 sm:mb-4 ${
             userData.isCheckedIn ? 'bg-green-100' : 'bg-gray-100'
           }`}>
             {userData.isCheckedIn ? (
-              <CheckCircle className="w-10 h-10 text-green-600" />
+              <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
             ) : (
-              <Clock className="w-10 h-10 text-gray-600" />
+              <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600" />
             )}
           </div>
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-xl sm:text-2xl">
             {userData.isCheckedIn ? 'You are checked in' : 'Ready to check in?'}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm sm:text-base">
             {userData.isCheckedIn 
               ? 'Click below when you\'re ready to check out' 
               : 'Click below to record your arrival'
             }
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <MapPin className="w-4 h-4" />
+        <CardContent className="text-center space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-600">
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Ibadan City Polytechnic Campus</span>
           </div>
           
@@ -214,28 +213,28 @@ const CheckInOut = ({ userData }: CheckInOutProps) => {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {userData.lastCheckOut && (
               <div className="flex items-center justify-between py-2 border-b">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="font-medium">Last Check Out</span>
+                  <span className="font-medium text-sm sm:text-base">Last Check Out</span>
                 </div>
-                <span className="text-sm text-gray-600">
+                <span className="text-xs sm:text-sm text-gray-600">
                   {new Date(userData.lastCheckOut).toLocaleString()}
                 </span>
               </div>
             )}
             {userData.lastCheckIn && (
               <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="font-medium">Last Check In</span>
+                  <span className="font-medium text-sm sm:text-base">Last Check In</span>
                 </div>
-                <span className="text-sm text-gray-600">
+                <span className="text-xs sm:text-sm text-gray-600">
                   {new Date(userData.lastCheckIn).toLocaleString()}
                 </span>
               </div>
