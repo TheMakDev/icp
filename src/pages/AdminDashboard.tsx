@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,16 +31,23 @@ interface StaffStats {
 }
 
 const AdminSidebar = ({ currentView, setCurrentView }: { currentView: string; setCurrentView: (view: string) => void }) => {
+  const { setOpenMobile } = useSidebar();
+  
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
     { id: 'feedback', label: 'Send Feedback', icon: MessageSquare },
   ];
 
+  const handleMenuClick = (viewId: string) => {
+    setCurrentView(viewId);
+    setOpenMobile(false); // Close sidebar on mobile when menu item is clicked
+  };
+
   return (
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-sm">
             <Clock className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -54,7 +62,7 @@ const AdminSidebar = ({ currentView, setCurrentView }: { currentView: string; se
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
                 isActive={currentView === item.id}
-                onClick={() => setCurrentView(item.id)}
+                onClick={() => handleMenuClick(item.id)}
               >
                 <item.icon className="w-4 h-4" />
                 <span>{item.label}</span>
