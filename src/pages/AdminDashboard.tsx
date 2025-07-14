@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import AdminAttendanceView from '@/components/admin/AdminAttendanceView';
 import FeedbackMessage from '@/components/admin/FeedbackMessage';
+import logo from '../asset/logo.png'
 import {
   Sidebar,
   SidebarContent,
@@ -47,9 +48,7 @@ const AdminSidebar = ({ currentView, setCurrentView }: { currentView: string; se
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-sm">
-            <Clock className="w-5 h-5 text-white" />
-          </div>
+          <img src={logo} alt="ICP Logo" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
             <p className="text-sm text-gray-600">ICP Attendance Management</p>

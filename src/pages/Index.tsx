@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Clock, Users, BarChart3, Shield, Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import logo from '../asset/logo.png'
 
 const Index = () => {
   const navigate = useNavigate();
@@ -53,9 +54,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Clock className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
-              </div>
+              <img src={logo} alt="ICP Logo" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
               <div>
                 <h1 className="text-sm sm:text-lg font-semibold text-gray-900">ICP Attendance</h1>
                 <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Ibadan City Polytechnic</p>

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from "@/hooks/use-toast";
+import logo from '../asset/logo.png';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -103,9 +104,7 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-white" />
-            </div>
+            <img src={logo} alt="ICP Logo" className="h-10 w-10 rounded-full" />
           </div>
           <CardTitle className="text-2xl">ICP Attendance</CardTitle>
           <CardDescription>

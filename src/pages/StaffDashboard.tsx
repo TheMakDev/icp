@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import FeedbackMessages from '@/components/staff/FeedbackMessages';
+import logo from '../asset/logo.png';
 import {
   Sidebar,
   SidebarContent,
@@ -40,11 +41,9 @@ const StaffSidebar = ({ currentView, setCurrentView }: { currentView: string; se
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-sm">
-            <Clock className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
-          </div>
+          <img src={logo} alt="ICP Logo" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
           <div>
-            <h1 className="text-sm sm:text-lg font-semibold text-gray-900">Staff Dashboard</h1>
+            <h1 className="text-sm sm:text-lg font-semibold text-gray-900">Student Dashboard</h1>
             <p className="text-xs sm:text-sm text-gray-600">ICP Attendance System</p>
           </div>
         </div>
