@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, LogIn, LogOut, Calendar, User, MessageSquare, Menu, X } from 'lucide-react';
+import { Clock, LogIn, LogOut, Calendar, User, MessageSquare, Home, History } from 'lucide-react';
 import AttendanceHistory from '@/components/attendance/AttendanceHistory';
 import CheckInOut from '@/components/attendance/CheckInOut';
 import { useProfile } from '@/hooks/useProfile';
@@ -9,10 +9,60 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import FeedbackMessages from '@/components/staff/FeedbackMessages';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+const StaffSidebar = ({ currentView, setCurrentView }: { currentView: string; setCurrentView: (view: string) => void }) => {
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'checkin', label: 'Check In/Out', icon: Clock },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
+  ];
+
+  return (
+    <Sidebar className="border-r">
+      <SidebarHeader className="p-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Clock className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm sm:text-lg font-semibold text-gray-900">Staff Dashboard</h1>
+            <p className="text-xs sm:text-sm text-gray-600">ICP Attendance System</p>
+          </div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarMenu>
+          {menuItems.map((item) => (
+            <SidebarMenuItem key={item.id}>
+              <SidebarMenuButton
+                isActive={currentView === item.id}
+                onClick={() => setCurrentView(item.id)}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarContent>
+    </Sidebar>
+  );
+};
 
 const StaffDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { profile, isLoading: profileLoading } = useProfile();
   const { signOut } = useAuth();
 
@@ -78,15 +128,6 @@ const StaffDashboard = () => {
 
   const handleLogout = async () => {
     await signOut();
-  };
-
-  const closeMobileMenu = () => {
-    setMobileMenuOpen(false);
-  };
-
-  const handleNavClick = (view: string) => {
-    setCurrentView(view);
-    closeMobileMenu();
   };
 
   if (profileLoading) {
@@ -197,7 +238,7 @@ const StaffDashboard = () => {
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-0 sm:flex sm:gap-4">
                 <Button 
-                  onClick={() => handleNavClick('checkin')}
+                  onClick={() => setCurrentView('checkin')}
                   className="bg-green-600 hover:bg-green-700 w-full sm:flex-1"
                   size="sm"
                 >
@@ -206,7 +247,7 @@ const StaffDashboard = () => {
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => handleNavClick('history')}
+                  onClick={() => setCurrentView('history')}
                   className="w-full sm:flex-1"
                   size="sm"
                 >
@@ -215,7 +256,7 @@ const StaffDashboard = () => {
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => handleNavClick('messages')}
+                  onClick={() => setCurrentView('messages')}
                   className="w-full sm:flex-1"
                   size="sm"
                 >
@@ -235,164 +276,83 @@ const StaffDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Clock className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-sm sm:text-lg font-semibold text-gray-900">Staff Dashboard</h1>
-                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">ICP Attendance System</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                size="sm"
-                className="hidden sm:inline-flex"
-              >
-                Logout
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="sm:hidden"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <SidebarProvider>
+      <div className="min-h-screen bg-gray-50 flex w-full">
+        {/* Sidebar for mobile and desktop */}
+        <StaffSidebar currentView={currentView} setCurrentView={setCurrentView} />
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 sm:hidden">
-          <div className="fixed inset-0 bg-black bg-opacity-25" onClick={closeMobileMenu}></div>
-          <div className="relative flex flex-col w-64 h-full bg-white shadow-xl">
-            <div className="p-4 border-b">
+        {/* Main content */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+            <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold">Menu</h2>
-                <Button variant="ghost" size="sm" onClick={closeMobileMenu}>
-                  <X className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  <SidebarTrigger className="md:hidden" />
+                  {/* Desktop navigation tabs - hidden on mobile */}
+                  <div className="hidden md:flex space-x-8">
+                    <button 
+                      onClick={() => setCurrentView('dashboard')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        currentView === 'dashboard' 
+                          ? 'border-blue-500 text-blue-600' 
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Dashboard
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('checkin')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        currentView === 'checkin' 
+                          ? 'border-blue-500 text-blue-600' 
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Check In/Out
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('history')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        currentView === 'history' 
+                          ? 'border-blue-500 text-blue-600' 
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      History
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('messages')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                        currentView === 'messages' 
+                          ? 'border-blue-500 text-blue-600' 
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Messages
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLogout}
+                    size="sm"
+                  >
+                    Logout
+                  </Button>
+                </div>
               </div>
             </div>
-            <nav className="flex-1 p-4 space-y-2">
-              <button 
-                onClick={() => handleNavClick('dashboard')}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'dashboard' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Dashboard
-              </button>
-              <button 
-                onClick={() => handleNavClick('checkin')}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'checkin' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Check In/Out
-              </button>
-              <button 
-                onClick={() => handleNavClick('history')}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'history' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                History
-              </button>
-              <button 
-                onClick={() => handleNavClick('messages')}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'messages' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Messages
-              </button>
-            </nav>
-            <div className="p-4 border-t">
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                size="sm"
-                className="w-full"
-              >
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </header>
 
-      {/* Desktop Navigation - Hidden on mobile */}
-      <nav className="bg-white border-b hidden sm:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <button 
-              onClick={() => setCurrentView('dashboard')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                currentView === 'dashboard' 
-                  ? 'border-blue-500 text-blue-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button 
-              onClick={() => setCurrentView('checkin')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                currentView === 'checkin' 
-                  ? 'border-blue-500 text-blue-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Check In/Out
-            </button>
-            <button 
-              onClick={() => setCurrentView('history')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                currentView === 'history' 
-                  ? 'border-blue-500 text-blue-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              History
-            </button>
-            <button 
-              onClick={() => setCurrentView('messages')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                currentView === 'messages' 
-                  ? 'border-blue-500 text-blue-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Messages
-            </button>
-          </div>
+          {/* Main Content */}
+          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            {renderContent()}
+          </main>
         </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl mx-auto">
-        {renderContent()}
-      </main>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
