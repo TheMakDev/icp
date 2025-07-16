@@ -45,6 +45,7 @@ const AdminSidebar = ({ currentView, setCurrentView }: { currentView: string; se
   };
 
   return (
+    
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
         <div className="flex items-center space-x-3">
@@ -184,6 +185,17 @@ const AdminDashboard = () => {
           </header>
 
           {/* Main Content */}
+          <Card className="mx-4 sm:mx-6 lg:mx-8 mt-4">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                {/* <User className="w-4 h-4 sm:w-5 sm:h-5" /> */}
+                <span className="truncate">Admin Dashboard</span>
+              </CardTitle>
+              {/* <CardDescription className="text-sm">
+                {useAuth().userData.department} • Staff ID: {useAuth().userData.admin}
+              </CardDescription> */}
+            </CardHeader>
+            </Card>
           <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
             {currentView === 'dashboard' && (
               <>
